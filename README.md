@@ -41,7 +41,7 @@ Members {size:3, ver:2} [
 
 **2\.** Starten einer Task für **Node 1** (z.B. mit dem [httpie-Tool](https://httpie.org/)):
 ```bash
-http POST http://localhost:8080/fibonacci/ n=10
+$ http POST http://localhost:8080/fibonacci/ n=10
 ```
  
 Die Status-Wechsel der Task erkennt man daraufhin an den folgenden Log-Meldungen:

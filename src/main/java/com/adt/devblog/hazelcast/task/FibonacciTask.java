@@ -9,6 +9,7 @@ import lombok.Setter;
 
 import java.io.Serializable;
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A long running task to calculate fibonacci(n) recursively.
@@ -16,6 +17,7 @@ import java.util.concurrent.Callable;
 public class FibonacciTask implements Callable<FibonacciTaskResult>, HazelcastInstanceAware, Serializable {
 
   private final Long n;
+  private Long syncPoint;
 
   @Getter
   private HazelcastInstance hcInstance;
@@ -37,6 +39,8 @@ public class FibonacciTask implements Callable<FibonacciTaskResult>, HazelcastIn
   @Override
   public FibonacciTaskResult call() {
 
+    syncPoint = System.currentTimeMillis();
+
     // check if task was cancelled before started
     if (FibonacciTaskStatus.STATUS.CANCELLED.equals(getJobStatus())) {
       throw new CancelledTaskException("FibonacciTaskStatus was cancelled before start.");
@@ -53,12 +57,18 @@ public class FibonacciTask implements Callable<FibonacciTaskResult>, HazelcastIn
   }
 
   private Long calculate(Long n) {
-    if (FibonacciTaskStatus.STATUS.CANCELLED.equals(getJobStatus())) {
-      throw new CancelledTaskException("FibonacciTaskStatus was cancelled during execution.");
-    }
     if (n <= 1L) {
       return n;
     } else {
+
+      // since getJobStatus is very time consuming the status request is limited to "every 15 seconds"
+      if ((System.currentTimeMillis() - syncPoint) >= 15000L) {
+        syncPoint = System.currentTimeMillis();
+        if (FibonacciTaskStatus.STATUS.CANCELLED.equals(getJobStatus())) {
+          throw new CancelledTaskException("FibonacciTaskStatus was cancelled during execution.");
+        }
+      }
+
       return calculate(n - 1L) + calculate(n - 2L);
     }
   }
